@@ -1,0 +1,5 @@
+{
+  "name": "CerfaFlow - Arrêté de Circulation V1",
+  "description": "Application pour générer et gérer les demandes d'arrêtés de circulation (CERFA 14024*01) pour les entreprises de travaux.",
+  "requestFramePermissions": []
+}
