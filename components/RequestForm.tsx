@@ -21,6 +21,9 @@ const RequestForm: React.FC<RequestFormProps> = ({ profile, onRedirectToProfile 
     additionalInfo: ''
   });
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   if (!profile) {
     return (
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow-sm">
@@ -55,9 +58,18 @@ const RequestForm: React.FC<RequestFormProps> = ({ profile, onRedirectToProfile 
     setRequestData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleGeneratePDF = (e: React.FormEvent) => {
+  const handleGeneratePDF = async (e: React.FormEvent) => {
     e.preventDefault();
-    generateCerfaPDF(profile, requestData);
+    setIsGenerating(true);
+    setError(null);
+    try {
+      await generateCerfaPDF(profile, requestData);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      setError("Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -66,6 +78,13 @@ const RequestForm: React.FC<RequestFormProps> = ({ profile, onRedirectToProfile 
         <h2 className="text-2xl font-bold text-gray-800">Nouvelle Demande</h2>
         <p className="text-gray-500 mt-1">Remplissez les détails du chantier pour générer le CERFA 14024*01 officiel.</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded text-red-700 flex items-center">
+          <AlertCircle className="w-5 h-5 mr-2" />
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleGeneratePDF}>
         
@@ -197,10 +216,24 @@ const RequestForm: React.FC<RequestFormProps> = ({ profile, onRedirectToProfile 
         <div className="flex items-center justify-end border-t pt-6">
              <button
                 type="submit"
-                className="flex items-center bg-brand-600 text-white px-8 py-3 rounded-lg hover:bg-brand-700 transition-colors shadow-lg font-bold text-lg"
+                disabled={isGenerating}
+                className={`flex items-center px-8 py-3 rounded-lg transition-colors shadow-lg font-bold text-lg ${
+                  isGenerating 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-brand-600 text-white hover:bg-brand-700'
+                }`}
             >
-                <FileDown className="w-6 h-6 mr-2" />
-                Générer le CERFA 14024*01
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-6 h-6 mr-2" />
+                    Générer le CERFA 14024*01
+                  </>
+                )}
             </button>
         </div>
       </form>

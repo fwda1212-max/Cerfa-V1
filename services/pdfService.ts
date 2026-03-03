@@ -1,24 +1,31 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { CompanyProfile, WorkRequest } from "../types";
-import { CERFA_TEMPLATE_BASE64 } from './cerfaTemplate';
 
 export const generateCerfaPDF = async (profile: CompanyProfile, request: WorkRequest) => {
+  console.log("Starting PDF generation...", { profile, request });
   try {
     let pdfDoc: PDFDocument;
     
     // 1. Charger le template PDF
     try {
-        pdfDoc = await PDFDocument.load(CERFA_TEMPLATE_BASE64);
+        console.log("Fetching template from /cerfaTemplate.pdf");
+        const response = await fetch('/cerfaTemplate.pdf');
+        if (!response.ok) throw new Error(`Failed to fetch template: ${response.status} ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        console.log("Template fetched, loading PDF document");
+        pdfDoc = await PDFDocument.load(arrayBuffer);
     } catch (loadError) {
         console.error("Erreur chargement template. Utilisation PDF vierge.", loadError);
         pdfDoc = await PDFDocument.create();
         pdfDoc.addPage([595.28, 841.89]); // Format A4
     }
 
+    console.log("Embedding fonts");
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
     const pages = pdfDoc.getPages();
+    console.log(`PDF loaded with ${pages.length} pages`);
     const page1 = pages[0];
     
     // --- Helpers pour dessiner ---
@@ -201,17 +208,20 @@ export const generateCerfaPDF = async (profile: CompanyProfile, request: WorkReq
     }
 
     // Sauvegarde et téléchargement
+    console.log("Saving PDF bytes");
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `CERFA_14024-01_${profile.companyName.replace(/\s+/g, '_')}_${request.locationCity}.pdf`;
     document.body.appendChild(link);
+    console.log("Triggering download");
     link.click();
     document.body.removeChild(link);
+    console.log("PDF generation and download complete");
 
   } catch (error) {
     console.error("Erreur PDF:", error);
-    alert("Une erreur est survenue lors de la création du PDF.");
+    throw error;
   }
 };
